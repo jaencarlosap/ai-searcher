@@ -1,0 +1,14 @@
+services:
+  transcription:
+    build: .
+    volumes:
+      - ~/.cache/whisper:/root/.cache/whisper
+      - ./app.py:/app/app.py
+      - ./resources:/app/resources
+      - ./results.txt:/app/results.txt
+    working_dir: /app
+    environment:
+      - PYTHONUNBUFFERED=1 # Ensures output appears in real-time
+    stdin_open: true # Allows interactive console
+    tty: true
+    command: python app.py
