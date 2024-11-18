@@ -1,15 +1,21 @@
 import os
-import whisper
 import re
 import logging
 import time
 import concurrent.futures
+from faster_whisper import WhisperModel
 
 # Set OpenMP to use a single thread
 os.environ["OMP_NUM_THREADS"] = "1"
+os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
+os.environ["MKL_THREADING_LAYER"] = "GNU"
+
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+
+# Initialize the faster-whisper model globally
+model = WhisperModel("small", device="auto", compute_type="int8") 
 
 # Function to check if the whisper file should be processed
 def is_valid_file(whisper_file):
@@ -20,15 +26,15 @@ def is_valid_file(whisper_file):
 
 # Function to transcribe a single file
 def transcribe_file(whisper_file, resources_folder):
-    model = whisper.load_model('tiny')  # Load the model in each thread
     temp_path_file = os.path.join(resources_folder, whisper_file)
     try:
         start_time = time.time()
-        result = model.transcribe(temp_path_file)
+        segments, _ = model.transcribe(temp_path_file, beam_size=5, language='es')
+        transcription = " ".join(segment.text for segment in segments)
         end_time = time.time()
         duration = end_time - start_time
         logging.info(f'{whisper_file}: done (Duration: {duration:.2f} seconds)')
-        return f'{whisper_file}: {result["text"]} (Duration: {duration:.2f} seconds)'
+        return f'{whisper_file}: {transcription} (Duration: {duration:.2f} seconds)'
     except Exception as error:
         logging.error(f'{whisper_file}: error {error}')
         return None
